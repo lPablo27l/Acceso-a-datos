@@ -1,0 +1,15 @@
+{
+  "tests": 12,
+  "failures": 0,
+  "errors": 0,
+  "summaries": 4,
+  "signatures": 4,
+  "quarantined_empty_files": 1,
+  "restart_preserves_json_sha256": true,
+  "json_sha256": {
+    "summary_batch_11e2be5e-1ad8-48b5-a7cc-8bbbdd4f1bb8.json": "b0a704811859ea59b84a9200617362dcd707e24d54dbd0d08fe6989abd128095",
+    "summary_batch_27d02b24-76f6-45f9-a321-22ac331c2fd6.json": "208800733247753b470b780f4329ca75fc7c531ab87cdf3dde32ff2f1bc0e9e6",
+    "summary_batch_e9dace4a-d0be-4bb6-a558-2d17b79c585c.json": "b2127668f4f3c952d2ea3a06102fe75d5789a35384fb51a2620a3ac9bc027cd0",
+    "summary_batch_fa724434-ee9c-4db6-a5d9-3bb267fc041b.json": "6981e55aade52e5e0e7e66123f700699b04349f5a92161cfdd816d4c2a8aaaf2"
+  }
+}

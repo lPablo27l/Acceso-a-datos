@@ -1,0 +1,10 @@
+{
+  "batchId" : "e9dace4a-d0be-4bb6-a558-2d17b79c585c",
+  "sourceFile" : "batch_usa.zip!daily_sales_usa.csv",
+  "transactions" : 3,
+  "totalSales" : 68450.75,
+  "stores" : [ "Zara Times Square New York", "Zara 5th Avenue New York" ],
+  "categories" : [ "WOMEN", "MEN", "KIDS" ],
+  "dates" : [ "2026-09-13" ],
+  "processedAt" : "2026-11-02T18:00:43.935168100Z"
+}

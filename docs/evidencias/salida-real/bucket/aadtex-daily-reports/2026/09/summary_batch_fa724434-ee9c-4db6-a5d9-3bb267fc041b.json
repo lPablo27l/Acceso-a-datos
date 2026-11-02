@@ -1,0 +1,10 @@
+{
+  "batchId" : "fa724434-ee9c-4db6-a5d9-3bb267fc041b",
+  "sourceFile" : "daily_sales_spain.csv",
+  "transactions" : 3,
+  "totalSales" : 20100.80,
+  "stores" : [ "Zara Puerta del Sol Madrid", "Zara Gran Vía Madrid" ],
+  "categories" : [ "WOMEN", "MEN", "KIDS" ],
+  "dates" : [ "2026-09-13" ],
+  "processedAt" : "2026-11-02T18:00:44.032630900Z"
+}

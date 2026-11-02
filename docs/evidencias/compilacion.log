@@ -1,0 +1,101 @@
+[INFO] Scanning for projects...
+[INFO] 
+[INFO] -------------------------< es.aadtex:ra1-act1 >-------------------------
+[INFO] Building AadTex Store Ingestion Engine 1.0.0
+[INFO]   from pom.xml
+[INFO] --------------------------------[ jar ]---------------------------------
+[INFO] 
+[INFO] --- resources:3.3.1:resources (default-resources) @ ra1-act1 ---
+[INFO] Copying 1 resource from src\main\resources to target\classes
+[INFO] Copying 0 resource from src\main\resources to target\classes
+[INFO] 
+[INFO] --- compiler:3.14.1:compile (default-compile) @ ra1-act1 ---
+[INFO] Nothing to compile - all classes are up to date.
+[INFO] 
+[INFO] --- resources:3.3.1:testResources (default-testResources) @ ra1-act1 ---
+[INFO] skip non existing resourceDirectory C:\Users\Pablo\Documents\Codex\2026-11-02\gen\outputs\ra1_act1\src\test\resources
+[INFO] 
+[INFO] --- compiler:3.14.1:testCompile (default-testCompile) @ ra1-act1 ---
+[INFO] Nothing to compile - all classes are up to date.
+[INFO] 
+[INFO] --- surefire:3.5.4:test (default-test) @ ra1-act1 ---
+[INFO] Using auto detected provider org.apache.maven.surefire.junitplatform.JUnitPlatformProvider
+[INFO] 
+[INFO] -------------------------------------------------------
+[INFO]  T E S T S
+[INFO] -------------------------------------------------------
+[INFO] Running es.aadtex.IngestionTest
+18:59:44.850 [main] INFO es.aadtex.MultiLanguageDataGenerator -- [DEMO] Datos UTF-8, AES-128, ZIP, firmas JPEG y fichero vac�o preparados en C:\Users\Pablo\Documents\Codex\2026-11-02\gen\work\test-tmp\junit-10875242753545497518\input
+18:59:44.858 [main] INFO es.aadtex.StoreIngestionService -- [SCAN] Entrada: C:\Users\Pablo\Documents\Codex\2026-11-02\gen\work\test-tmp\junit-10875242753545497518\input | ficheros: 8
+18:59:44.862 [main] INFO es.aadtex.StoreIngestionService -- [JPG] signature_china.jpg copiada con buffer de 4096 bytes
+18:59:44.866 [main] INFO es.aadtex.StoreIngestionService -- [JPG] signature_financial.jpg copiada con buffer de 4096 bytes
+18:59:44.870 [main] INFO es.aadtex.StoreIngestionService -- [JPG] signature_spain.jpg copiada con buffer de 4096 bytes
+18:59:44.944 [main] INFO es.aadtex.StoreIngestionService -- [OK] batch_usa.zip!daily_sales_usa.csv | transacciones=3 | total=68450.75 | tiendas=[Zara Times Square New York, Zara 5th Avenue New York]
+18:59:44.944 [main] INFO es.aadtex.StoreIngestionService -- [JSON] C:\Users\Pablo\Documents\Codex\2026-11-02\gen\work\test-tmp\junit-10875242753545497518\output\bucket\aadtex-daily-reports\2026\09\summary_batch_60bfea62-ab09-4cdc-b4c6-5f4e66033193.json
+18:59:44.944 [main] INFO es.aadtex.StoreIngestionService -- [ZIP] batch_usa.zip procesado en flujo con ZipInputStream; sin CSV temporal
+18:59:44.944 [main] ERROR es.aadtex.StoreIngestionService -- [ALERT EMAIL SENT -> soporte@aadtex.com] CRITICAL: Empty/Corrupt batch file: daily_sales_broken_store.csv | Fichero de 0 bytes
+18:59:44.951 [main] INFO es.aadtex.StoreIngestionService -- [OK] daily_sales_china.csv | transacciones=2 | total=41300.80 | tiendas=[Zara ???????]
+18:59:44.952 [main] INFO es.aadtex.StoreIngestionService -- [JSON] C:\Users\Pablo\Documents\Codex\2026-11-02\gen\work\test-tmp\junit-10875242753545497518\output\bucket\aadtex-daily-reports\2026\09\summary_batch_701b44ad-9de7-49f3-bdd6-550f8e020d18.json
+18:59:44.953 [main] INFO es.aadtex.StoreIngestionService -- [AES] daily_sales_financial.enc descifrado en RAM; sin CSV financiero en disco
+18:59:44.956 [main] INFO es.aadtex.StoreIngestionService -- [OK] daily_sales_financial.enc | transacciones=1 | total=95000.00 | tiendas=[Central Financial Office]
+18:59:44.956 [main] INFO es.aadtex.StoreIngestionService -- [JSON] C:\Users\Pablo\Documents\Codex\2026-11-02\gen\work\test-tmp\junit-10875242753545497518\output\bucket\aadtex-daily-reports\2026\09\summary_batch_11e58493-a6f0-40f6-ad1e-cf2d0fffcc49.json
+18:59:44.960 [main] INFO es.aadtex.StoreIngestionService -- [OK] daily_sales_spain.csv | transacciones=3 | total=20100.80 | tiendas=[Zara Puerta del Sol Madrid, Zara Gran V�a Madrid]
+18:59:44.960 [main] INFO es.aadtex.StoreIngestionService -- [JSON] C:\Users\Pablo\Documents\Codex\2026-11-02\gen\work\test-tmp\junit-10875242753545497518\output\bucket\aadtex-daily-reports\2026\09\summary_batch_38bd4b8b-66d4-4c3e-9a39-d6ace734b3d1.json
+18:59:44.962 [main] INFO es.aadtex.StoreIngestionService -- [SCAN] Entrada: C:\Users\Pablo\Documents\Codex\2026-11-02\gen\work\test-tmp\junit-10875242753545497518\input | ficheros: 0
+18:59:44.964 [main] INFO es.aadtex.StoreIngestionService -- [SCAN] Entrada: C:\Users\Pablo\Documents\Codex\2026-11-02\gen\work\test-tmp\junit-10875242753545497518\input | ficheros: 0
+18:59:45.016 [main] INFO es.aadtex.StoreIngestionService -- [SCAN] Entrada: C:\Users\Pablo\Documents\Codex\2026-11-02\gen\work\test-tmp\junit-833739334692786202\input | ficheros: 2
+18:59:45.018 [main] ERROR es.aadtex.StoreIngestionService -- [ALERT EMAIL SENT -> soporte@aadtex.com] CRITICAL: Empty/Corrupt batch file: missing.zip | ZIP sin pareja CSV/firma coherente
+18:59:45.021 [main] ERROR es.aadtex.StoreIngestionService -- [ALERT EMAIL SENT -> soporte@aadtex.com] CRITICAL: Empty/Corrupt batch file: traversal.zip | Ruta ZIP peligrosa: ../escape.csv
+18:59:45.072 [main] INFO es.aadtex.StoreIngestionService -- [SCAN] Entrada: C:\Users\Pablo\Documents\Codex\2026-11-02\gen\work\test-tmp\junit-4794715697145929321\input | ficheros: 2
+18:59:45.081 [main] INFO es.aadtex.StoreIngestionService -- [OK] good.zip!daily_sales_usa.csv | transacciones=3 | total=68450.75 | tiendas=[Zara Times Square New York, Zara 5th Avenue New York]
+18:59:45.082 [main] INFO es.aadtex.StoreIngestionService -- [JSON] C:\Users\Pablo\Documents\Codex\2026-11-02\gen\work\test-tmp\junit-4794715697145929321\output\bucket\aadtex-daily-reports\2026\09\summary_batch_ec8b598c-72ec-4051-825c-65bf2dedcf45.json
+18:59:45.082 [main] INFO es.aadtex.StoreIngestionService -- [ZIP] good.zip procesado en flujo con ZipInputStream; sin CSV temporal
+18:59:45.083 [main] ERROR es.aadtex.StoreIngestionService -- [ALERT EMAIL SENT -> soporte@aadtex.com] CRITICAL: Empty/Corrupt batch file: truncated.zip | zip END header not found
+18:59:45.159 [main] INFO es.aadtex.MultiLanguageDataGenerator -- [DEMO] Datos UTF-8, AES-128, ZIP, firmas JPEG y fichero vac�o preparados en C:\Users\Pablo\Documents\Codex\2026-11-02\gen\work\test-tmp\junit-2164020101607561978\input
+18:59:45.163 [main] INFO es.aadtex.StoreIngestionService -- [SCAN] Entrada: C:\Users\Pablo\Documents\Codex\2026-11-02\gen\work\test-tmp\junit-2164020101607561978\input | ficheros: 8
+18:59:45.166 [main] INFO es.aadtex.StoreIngestionService -- [JPG] signature_china.jpg copiada con buffer de 4096 bytes
+18:59:45.169 [main] INFO es.aadtex.StoreIngestionService -- [JPG] signature_financial.jpg copiada con buffer de 4096 bytes
+18:59:45.173 [main] INFO es.aadtex.StoreIngestionService -- [JPG] signature_spain.jpg copiada con buffer de 4096 bytes
+18:59:45.183 [main] INFO es.aadtex.StoreIngestionService -- [OK] batch_usa.zip!daily_sales_usa.csv | transacciones=3 | total=68450.75 | tiendas=[Zara Times Square New York, Zara 5th Avenue New York]
+18:59:45.183 [main] INFO es.aadtex.StoreIngestionService -- [JSON] C:\Users\Pablo\Documents\Codex\2026-11-02\gen\work\test-tmp\junit-2164020101607561978\output\bucket\aadtex-daily-reports\2026\09\summary_batch_cb7675d1-c6fb-482e-84eb-d8b5b227728e.json
+18:59:45.183 [main] INFO es.aadtex.StoreIngestionService -- [ZIP] batch_usa.zip procesado en flujo con ZipInputStream; sin CSV temporal
+18:59:45.183 [main] ERROR es.aadtex.StoreIngestionService -- [ALERT EMAIL SENT -> soporte@aadtex.com] CRITICAL: Empty/Corrupt batch file: daily_sales_broken_store.csv | Fichero de 0 bytes
+18:59:45.189 [main] INFO es.aadtex.StoreIngestionService -- [OK] daily_sales_china.csv | transacciones=2 | total=41300.80 | tiendas=[Zara ???????]
+18:59:45.189 [main] INFO es.aadtex.StoreIngestionService -- [JSON] C:\Users\Pablo\Documents\Codex\2026-11-02\gen\work\test-tmp\junit-2164020101607561978\output\bucket\aadtex-daily-reports\2026\09\summary_batch_8ce555a8-3de9-4f51-b60f-54ad9b03e6cd.json
+18:59:45.190 [main] INFO es.aadtex.StoreIngestionService -- [AES] daily_sales_financial.enc descifrado en RAM; sin CSV financiero en disco
+18:59:45.194 [main] INFO es.aadtex.StoreIngestionService -- [OK] daily_sales_financial.enc | transacciones=1 | total=95000.00 | tiendas=[Central Financial Office]
+18:59:45.194 [main] INFO es.aadtex.StoreIngestionService -- [JSON] C:\Users\Pablo\Documents\Codex\2026-11-02\gen\work\test-tmp\junit-2164020101607561978\output\bucket\aadtex-daily-reports\2026\09\summary_batch_f6f6c4b8-d25a-4440-a684-ff9d9faf634f.json
+18:59:45.197 [main] INFO es.aadtex.StoreIngestionService -- [OK] daily_sales_spain.csv | transacciones=3 | total=20100.80 | tiendas=[Zara Puerta del Sol Madrid, Zara Gran V�a Madrid]
+18:59:45.197 [main] INFO es.aadtex.StoreIngestionService -- [JSON] C:\Users\Pablo\Documents\Codex\2026-11-02\gen\work\test-tmp\junit-2164020101607561978\output\bucket\aadtex-daily-reports\2026\09\summary_batch_71af8291-1eea-4d42-8503-b3ed37eed14d.json
+18:59:45.268 [main] INFO es.aadtex.StoreIngestionService -- [SCAN] Entrada: C:\Users\Pablo\Documents\Codex\2026-11-02\gen\work\test-tmp\junit-3176476003751876544\input | ficheros: 4
+18:59:45.271 [main] INFO es.aadtex.StoreIngestionService -- [JPG] signature_broken.jpg copiada con buffer de 4096 bytes
+18:59:45.274 [main] INFO es.aadtex.StoreIngestionService -- [JPG] signature_financial.jpg copiada con buffer de 4096 bytes
+18:59:45.276 [main] ERROR es.aadtex.StoreIngestionService -- [ALERT EMAIL SENT -> soporte@aadtex.com] CRITICAL: Empty/Corrupt batch file: daily_sales_broken.csv | Cabecera CSV incorrecta
+18:59:45.278 [main] ERROR es.aadtex.StoreIngestionService -- [ALERT EMAIL SENT -> soporte@aadtex.com] CRITICAL: Empty/Corrupt batch file: daily_sales_financial.enc | Input length must be multiple of 16 when decrypting with padded cipher
+18:59:45.318 [main] INFO es.aadtex.StoreIngestionService -- [SCAN] Entrada: C:\Users\Pablo\Documents\Codex\2026-11-02\gen\work\test-tmp\junit-12734390760014174225\input | ficheros: 1
+18:59:45.319 [main] ERROR es.aadtex.StoreIngestionService -- [ALERT EMAIL SENT -> soporte@aadtex.com] CRITICAL: Empty/Corrupt batch file: signature_fake.jpg | Firma sin cabecera JPEG v�lida
+18:59:45.472 [main] INFO es.aadtex.StoreIngestionService -- [SCAN] Entrada: C:\Users\Pablo\Documents\Codex\2026-11-02\gen\work\test-tmp\junit-5959122703687011151\input | ficheros: 1
+18:59:45.472 [main] WARN es.aadtex.StoreIngestionService -- [WAIT] daily_sales_spain.csv espera la firma signature_spain.jpg
+18:59:45.479 [main] INFO es.aadtex.StoreIngestionService -- [SCAN] Entrada: C:\Users\Pablo\Documents\Codex\2026-11-02\gen\work\test-tmp\junit-5959122703687011151\input | ficheros: 2
+18:59:45.482 [main] INFO es.aadtex.StoreIngestionService -- [JPG] signature_spain.jpg copiada con buffer de 4096 bytes
+18:59:45.488 [main] INFO es.aadtex.StoreIngestionService -- [OK] daily_sales_spain.csv | transacciones=3 | total=20100.80 | tiendas=[Zara Puerta del Sol Madrid, Zara Gran V�a Madrid]
+18:59:45.488 [main] INFO es.aadtex.StoreIngestionService -- [JSON] C:\Users\Pablo\Documents\Codex\2026-11-02\gen\work\test-tmp\junit-5959122703687011151\output\bucket\aadtex-daily-reports\2026\09\summary_batch_d575073f-5a56-4ce2-b587-2bb3feccf6b2.json
+[INFO] Tests run: 12, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 1.234 s -- in es.aadtex.IngestionTest
+[INFO] 
+[INFO] Results:
+[INFO] 
+[INFO] Tests run: 12, Failures: 0, Errors: 0, Skipped: 0
+[INFO] 
+[INFO] 
+[INFO] --- jar:3.4.2:jar (default-jar) @ ra1-act1 ---
+[INFO] Building jar: C:\Users\Pablo\Documents\Codex\2026-11-02\gen\outputs\ra1_act1\target\ra1-act1-1.0.0.jar
+[INFO] 
+[INFO] --- spring-boot:3.5.7:repackage (repackage) @ ra1-act1 ---
+[INFO] Replacing main artifact C:\Users\Pablo\Documents\Codex\2026-11-02\gen\outputs\ra1_act1\target\ra1-act1-1.0.0.jar with repackaged archive, adding nested dependencies in BOOT-INF/.
+[INFO] The original artifact has been renamed to C:\Users\Pablo\Documents\Codex\2026-11-02\gen\outputs\ra1_act1\target\ra1-act1-1.0.0.jar.original
+[INFO] ------------------------------------------------------------------------
+[INFO] BUILD SUCCESS
+[INFO] ------------------------------------------------------------------------
+[INFO] Total time:  8.443 s
+[INFO] Finished at: 2026-11-02T18:59:50+01:00
+[INFO] ------------------------------------------------------------------------

@@ -1,0 +1,10 @@
+{
+  "batchId" : "27d02b24-76f6-45f9-a321-22ac331c2fd6",
+  "sourceFile" : "daily_sales_financial.enc",
+  "transactions" : 1,
+  "totalSales" : 95000.00,
+  "stores" : [ "Central Financial Office" ],
+  "categories" : [ "FINANCIAL_REPORT" ],
+  "dates" : [ "2026-09-13" ],
+  "processedAt" : "2026-11-02T18:00:44.027870700Z"
+}

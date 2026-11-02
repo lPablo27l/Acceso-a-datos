@@ -1,0 +1,10 @@
+{
+  "batchId" : "11e2be5e-1ad8-48b5-a7cc-8bbbdd4f1bb8",
+  "sourceFile" : "daily_sales_china.csv",
+  "transactions" : 2,
+  "totalSales" : 41300.80,
+  "stores" : [ "Zara 上海南京东路店" ],
+  "categories" : [ "WOMEN", "MEN" ],
+  "dates" : [ "2026-09-13" ],
+  "processedAt" : "2026-11-02T18:00:43.996240900Z"
+}
