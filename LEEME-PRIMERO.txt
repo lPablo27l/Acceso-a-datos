@@ -1,9 +1,0 @@
-Pablo Eugenio Escolar Carrellan · 2ºDAM
-
-1. Instala o utiliza Java 21.
-2. Abre iniciar.cmd y espera 5–10 segundos.
-3. Revisa store_data/output y store_data/logs/aadtex.log.
-4. Usa nueva-demo.cmd si quieres repetir en una carpeta nueva.
-5. Lee docs/MEMORIA.pdf, README.md y docs/DEFENSA.md.
-6. Las capturas están en docs/capturas y las evidencias en docs/evidencias/index.html.
-7. Sube ra1_act1.zip a Moodle con ese nombre exacto.

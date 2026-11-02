@@ -1,7 +1,4 @@
 target/
 store_data/
 .idea/
-.vscode/
 *.iml
-.mvn/apache-maven-*/
-demostraciones/

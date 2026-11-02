@@ -4,161 +4,178 @@ import java.io.*;
 import java.nio.file.*;
 import java.util.*;
 import java.util.zip.*;
-import javax.crypto.BadPaddingException;
-import javax.crypto.IllegalBlockSizeException;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.slf4j.*;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 @Service
 public class StoreIngestionService {
-    private static final Logger log=LoggerFactory.getLogger(StoreIngestionService.class);
-    private final StoragePaths paths;
-    private final CryptoService crypto;
+    private static final Logger log = LoggerFactory.getLogger(StoreIngestionService.class);
+    private final Path input;
+    private final Path processed;
+    private final Path signatures;
+    private final Path error;
     private final CsvSalesReader csv;
-    private final SignatureService signatures;
+    private final CryptoService crypto;
     private final CloudBucketService bucket;
-    public StoreIngestionService(StoragePaths paths, CryptoService crypto, CsvSalesReader csv,
-                                 SignatureService signatures, CloudBucketService bucket) {
-        this.paths=paths; this.crypto=crypto; this.csv=csv; this.signatures=signatures; this.bucket=bucket;
+
+    public StoreIngestionService(@Value("${aadtex.data-dir}") String root,
+            CsvSalesReader csv, CryptoService crypto, CloudBucketService bucket) {
+        input = Path.of(root, "input");
+        processed = Path.of(root, "output", "processed");
+        signatures = processed.resolve("signatures");
+        error = Path.of(root, "output", "error");
+        this.csv = csv;
+        this.crypto = crypto;
+        this.bucket = bucket;
     }
-    public synchronized void processPending() throws IOException {
-        paths.initialize();
-        List<Path> files;
-        try (var stream=Files.list(paths.input())) {
-            files=stream.filter(p->Files.isRegularFile(p,LinkOption.NOFOLLOW_LINKS))
-                .sorted(Comparator.comparingInt((Path p)->extension(p).equals("jpg")?0:1)
-                .thenComparing(p->p.getFileName().toString())).toList();
+
+    public void processPending() {
+        try {
+            for (Path directory : List.of(input, processed, signatures, error)) {
+                if (!Files.exists(directory)) Files.createDirectories(directory);
+            }
+            List<Path> files;
+            try (var listing = Files.list(input)) {
+                // Primero las firmas sueltas; después sus correspondientes ventas.
+                files = listing.filter(Files::isRegularFile)
+                    .sorted(Comparator.comparingInt((Path p) -> extension(p).equals("jpg") ? 0 : 1)
+                    .thenComparing(p -> p.getFileName().toString())).toList();
+            }
+            log.info("[SCAN] Archivos en input: {}", files.size());
+            for (Path file : files) processFile(file);
+        } catch (IOException e) {
+            log.error("No se pueden preparar o leer los directorios: {}", e.getMessage());
         }
-        log.info("[SCAN] Entrada: {} | ficheros: {}", paths.root().relativize(paths.input()), files.size());
-        for (Path file:files) {
-            String ext=extension(file);
-            if (!Set.of("csv","enc","jpg","zip").contains(ext)) continue;
+    }
+
+    private void processFile(Path file) {
+        String ext = extension(file);
+        if (!List.of("csv", "enc", "jpg", "zip").contains(ext)) return;
+        try {
+            if (Files.size(file) == 0) throw new IOException("Archivo de 0 bytes");
+            if (ext.equals("jpg")) {
+                try (InputStream source = Files.newInputStream(file)) {
+                    copySignature(source, signatures.resolve(file.getFileName()));
+                }
+                Files.delete(file);
+                log.info("[JPG] {} copiada con buffer de 4096 bytes", file.getFileName());
+                return;
+            }
+            SalesSummary summary;
+            if (ext.equals("zip")) {
+                summary = processZip(file);
+                log.info("[ZIP] {} leído con ZipInputStream, sin archivos temporales", file.getFileName());
+            } else {
+                String name = file.getFileName().toString();
+                String signatureName = name.replace("daily_sales_", "signature_")
+                        .replace(".csv", ".jpg").replace(".enc", ".jpg");
+                if (!Files.exists(signatures.resolve(signatureName))) {
+                    log.warn("[ESPERA] {} espera su firma", name);
+                    return;
+                }
+                if (ext.equals("enc")) {
+                    byte[] clear = crypto.decrypt(Files.readAllBytes(file));
+                    try (InputStream source = new ByteArrayInputStream(clear)) {
+                        summary = csv.read(source, name);
+                    } finally {
+                        Arrays.fill(clear, (byte) 0);
+                    }
+                    log.info("[AES] {} descifrado en memoria RAM", name);
+                } else {
+                    try (InputStream source = Files.newInputStream(file)) {
+                        summary = csv.read(source, name);
+                    }
+                }
+            }
+            bucket.publish(summary);
+            move(file, processed.resolve(file.getFileName()));
+            log.info("[OK] {} | ventas={} | total={} | tiendas={}",
+                    summary.sourceFile(), summary.transactions(), summary.totalSales(), summary.stores());
+        } catch (Exception e) {
+            log.error("[ALERT EMAIL SENT -> soporte@aadtex.com] CRITICAL: Empty/Corrupt batch file: {} | {}",
+                    file.getFileName(), e.getMessage());
             try {
-                if (Files.size(file)==0) throw new BatchValidationException("Fichero de 0 bytes");
-                String batchId = ext.equals("jpg") ? null : BatchIdentity.of(file);
-                if (batchId != null && bucket.published(batchId).isPresent()) {
-                    archive(file);
-                    log.info("[RECOVER] {} ya publicado; archivado sin duplicar JSON", file.getFileName());
-                    continue;
-                }
-                switch (ext) {
-                    case "jpg" -> copySignature(file);
-                    case "csv", "enc" -> processSales(file,ext,batchId);
-                    case "zip" -> processZip(file,batchId);
-                    default -> { }
-                }
-            } catch (BatchValidationException e) {
-                log.error("[ALERT EMAIL SENT -> soporte@aadtex.com] CRITICAL: Empty/Corrupt batch file: {} | {}",
-                    file.getFileName(),e.getMessage());
-                try { StoragePaths.move(file, StoragePaths.uniqueDestination(paths.error(),file.getFileName().toString())); }
-                catch (IOException moveError) { log.error("No se pudo aislar {}",file,moveError); }
-            } catch (Exception e) {
-                // Un problema de disco o publicación no convierte un lote válido en corrupto.
-                log.error("[RETRY] {} permanece en input: {}", file.getFileName(), e.getMessage());
+                move(file, error.resolve(file.getFileName()));
+            } catch (IOException moveError) {
+                log.error("No se pudo mover el archivo a error: {}", moveError.getMessage());
             }
         }
     }
+
+    private SalesSummary processZip(Path file) throws IOException {
+        // ZipFile comprueba el directorio central; ZipInputStream procesa el contenido.
+        try (ZipFile check = new ZipFile(file.toFile())) {
+            if (check.size() == 0) throw new IOException("ZIP vacío");
+        }
+        SalesSummary summary = null;
+        String csvName = null;
+        Path signature = null;
+        try (ZipInputStream zip = new ZipInputStream(Files.newInputStream(file))) {
+            ZipEntry entry;
+            while ((entry = zip.getNextEntry()) != null) {
+                String name = entry.getName();
+                if (entry.isDirectory()) continue;
+                if (name.contains("/") || name.contains("\\") || name.contains(":") || name.contains("..")) {
+                    throw new IOException("Nombre de archivo ZIP no permitido");
+                }
+                if (name.endsWith(".csv") && summary == null) {
+                    csvName = name;
+                    summary = csv.read(leaveOpen(zip), name);
+                } else if (name.startsWith("signature_") && name.endsWith(".jpg") && signature == null) {
+                    signature = signatures.resolve(name);
+                    // Se escribe directamente en su destino con buffer de 4 KB.
+                    copySignature(leaveOpen(zip), signature);
+                } else {
+                    throw new IOException("El ZIP debe contener un CSV y su firma JPG");
+                }
+                zip.closeEntry();
+            }
+            if (summary == null || signature == null || !csvName.startsWith("daily_sales_")
+                    || !signature.getFileName().toString().equals(csvName.replace("daily_sales_", "signature_").replace(".csv", ".jpg"))) {
+                throw new IOException("Pareja CSV y firma incompleta en el ZIP");
+            }
+            return summary;
+        } catch (IOException e) {
+            if (signature != null) Files.deleteIfExists(signature);
+            throw e;
+        }
+    }
+
+    private void copySignature(InputStream source, Path destination) throws IOException {
+        boolean complete = false;
+        try (BufferedInputStream in = new BufferedInputStream(source);
+             BufferedOutputStream out = new BufferedOutputStream(Files.newOutputStream(destination))) {
+            byte[] buffer = new byte[4096];
+            int count = in.readNBytes(buffer, 0, 3);
+            if (count != 3 || (buffer[0] & 255) != 255 || (buffer[1] & 255) != 216 || (buffer[2] & 255) != 255) {
+                throw new IOException("Cabecera JPEG incorrecta");
+            }
+            out.write(buffer, 0, count);
+            while ((count = in.read(buffer)) != -1) out.write(buffer, 0, count);
+            complete = true;
+        } finally {
+            if (!complete) Files.deleteIfExists(destination);
+        }
+    }
+
+    private static InputStream leaveOpen(InputStream source) {
+        return new FilterInputStream(source) {
+            @Override public void close() { /* El propietario cierra el ZIP completo. */ }
+        };
+    }
+
     private static String extension(Path file) {
-        String n=file.getFileName().toString(); int dot=n.lastIndexOf('.');
-        return dot<0?"":n.substring(dot+1).toLowerCase(Locale.ROOT);
+        String name = file.getFileName().toString();
+        int dot = name.lastIndexOf('.');
+        return dot == -1 ? "" : name.substring(dot + 1).toLowerCase(Locale.ROOT);
     }
-    private void copySignature(Path file) throws IOException {
-        Path temp=paths.temporary(".jpg.tmp");
+
+    private static void move(Path source, Path destination) throws IOException {
         try {
-            signatures.copy(Files.newInputStream(file),temp);
-            StoragePaths.move(temp, paths.signatures().resolve(file.getFileName()));
-            Files.delete(file);
-            log.info("[JPG] {} copiada con buffer de 4096 bytes",file.getFileName());
-        } finally { Files.deleteIfExists(temp); }
-    }
-    private void processSales(Path file, String extension, String batchId) throws Exception {
-        String name=file.getFileName().toString();
-        String stem=name.substring(0,name.lastIndexOf('.'));
-        if (!stem.startsWith("daily_sales_")) throw new BatchValidationException("Nombre de lote no reconocido");
-        String signature="signature_"+stem.substring("daily_sales_".length())+".jpg";
-        if (!Files.isRegularFile(paths.signatures().resolve(signature))) {
-            log.warn("[WAIT] {} espera la firma {}",name,signature); return;
+            Files.move(source, destination, StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING);
+        } catch (AtomicMoveNotSupportedException e) {
+            Files.move(source, destination, StandardCopyOption.REPLACE_EXISTING);
         }
-        SalesSummary summary;
-        if (extension.equals("enc")) {
-            // Lectura acotada incluso si el productor aumenta el fichero durante la lectura.
-            byte[] encrypted;
-            try (var input = Files.newInputStream(file)) {
-                encrypted = input.readNBytes(CsvSalesReader.MAX_BYTES + 1);
-            }
-            if (encrypted.length > CsvSalesReader.MAX_BYTES)
-                throw new BatchValidationException("Cifrado superior al límite de 16 MiB");
-            byte[] clear;
-            try { clear = crypto.decrypt(encrypted); }
-            catch (BadPaddingException | IllegalBlockSizeException e) {
-                throw new BatchValidationException("Lote AES incompleto o cifrado incorrecto", e);
-            }
-            try (var in=new ByteArrayInputStream(clear)) { summary=csv.read(in,name); }
-            finally { Arrays.fill(clear,(byte)0); }
-            log.info("[AES] {} descifrado en RAM; sin CSV financiero en disco",name);
-        } else {
-            try (var in=Files.newInputStream(file)) { summary=csv.read(in,name); }
-        }
-        complete(file,summary.identifiedBy(batchId));
-    }
-    private static InputStream leaveOpen(InputStream in) {
-        return new FilterInputStream(in) { @Override public void close() { /* El dueño cierra el ZIP. */ } };
-    }
-    private void processZip(Path file, String batchId) throws Exception {
-        SalesSummary summary=null;
-        Path tempSignature=paths.temporary(".jpg.tmp");
-        String signatureName=null, csvName=null;
-        Set<String> seen=new HashSet<>();
-        try {
-            // Comprueba también el directorio central; un ZIP truncado no se acepta.
-            try (var archive=new ZipFile(file.toFile())) {
-                if (archive.size()>20) throw new BatchValidationException("Demasiadas entradas ZIP");
-            }
-            try (var zip=new ZipInputStream(Files.newInputStream(file))) {
-                ZipEntry entry;
-                int count=0;
-                while ((entry=zip.getNextEntry())!=null) {
-                    if (++count>20) throw new BatchValidationException("Demasiadas entradas ZIP");
-                    String name=entry.getName().replace('\\','/');
-                    if (name.startsWith("/") || name.contains(":") || Arrays.asList(name.split("/")).contains(".."))
-                        throw new BatchValidationException("Ruta ZIP peligrosa: "+name);
-                    if (entry.isDirectory()) { zip.closeEntry(); continue; }
-                    // Sólo nombres simples; no se usan rutas proporcionadas por el ZIP.
-                    if (name.contains("/") || !seen.add(name)) throw new BatchValidationException("Entrada ZIP anidada o duplicada");
-                    if (name.endsWith(".csv") && summary==null) {
-                        csvName=name; summary=csv.read(leaveOpen(zip),file.getFileName()+"!"+name);
-                    } else if (name.startsWith("signature_") && name.endsWith(".jpg") && signatureName==null) {
-                        signatureName=name; signatures.copy(leaveOpen(zip),tempSignature);
-                    } else throw new BatchValidationException("Contenido ZIP inesperado: "+name);
-                    zip.closeEntry();
-                }
-            }
-            if (summary==null || signatureName==null || !csvName.startsWith("daily_sales_")
-                || !signatureName.equals(csvName.replace("daily_sales_","signature_").replace(".csv",".jpg")))
-                throw new BatchValidationException("ZIP sin pareja CSV/firma coherente");
-            // Publicar únicamente cuando todas las entradas han superado las validaciones y CRC.
-            Path signature=paths.signatures().resolve(signatureName);
-            if (Files.exists(signature) && Files.mismatch(tempSignature, signature) == -1) {
-                // Recupera un cierre entre la publicación de la firma y la del resumen.
-                Files.delete(tempSignature);
-            } else StoragePaths.move(tempSignature, signature);
-            complete(file, summary.identifiedBy(batchId));
-            log.info("[ZIP] {} procesado en flujo con ZipInputStream; sin CSV temporal",file.getFileName());
-        } catch (ZipException e) {
-            throw new BatchValidationException("ZIP incompleto o CRC incorrecto", e);
-        } finally { Files.deleteIfExists(tempSignature); }
-    }
-    private void archive(Path file) throws IOException {
-        StoragePaths.move(file, StoragePaths.uniqueDestination(paths.processed(), file.getFileName().toString()));
-    }
-    private void complete(Path file, SalesSummary summary) throws IOException {
-        if (!summary.batchId().equals(BatchIdentity.of(file)))
-            throw new IOException("El archivo cambió durante la lectura; se reintentará");
-        Path report = bucket.publish(summary);
-        // Si falla el movimiento, conservamos JSON e input. El próximo ciclo reconoce la huella.
-        archive(file);
-        log.info("[OK] {} | transacciones={} | total={} | tiendas={}", summary.sourceFile(), summary.transactions(), summary.totalSales(), summary.stores());
-        log.info("[JSON] {}", paths.root().relativize(report));
     }
 }

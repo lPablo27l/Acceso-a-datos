@@ -1,115 +1,39 @@
-# AadTex Store Ingestion Engine · RA1 Actividad 1
+# RA1 Act1 - AadTex Store Ingestion Engine
 
 **Alumno:** Pablo Eugenio Escolar Carrellan  
-**Curso:** 2ºDAM  
-**Módulo:** Acceso a Datos · RA1 Manejo de Ficheros  
+**Curso:** 2ºDAM - Acceso a Datos  
 **Repositorio:** https://github.com/lPablo27l/Acceso-a-datos
 
-Aplicación Spring Boot que revisa la entrada cada cinco segundos, valida ventas internacionales, descifra AES-128 en memoria, ingiere ZIP en flujo y copia firmas JPEG con un buffer de 4096 bytes. Publica resúmenes JSON en un bucket local y aísla entradas defectuosas.
+Aplicación Spring Boot para procesar ventas CSV en UTF-8, balances AES-128, lotes ZIP y firmas JPG. El procesamiento se ejecuta automáticamente cada cinco segundos. Los archivos inválidos se trasladan a errores y la alerta de correo se simula mediante el log.
 
-## Inicio rápido para la entrega y la defensa
+## Ejecución
 
-1. Descomprimir `ra1_act1.zip` y entrar en la carpeta `ra1_act1`.
-2. Tener **Java 21** instalado. Comprobarlo con `java -version`.
-3. En Windows, abrir **`iniciar.cmd`**. En Linux/macOS, ejecutar `sh iniciar.sh`.
-4. Esperar unos 5–10 segundos. Aparecerán `[SCAN]`, `[JPG]`, `[ZIP]`, `[AES]`, `[OK]`, `[JSON]` y la alerta del fichero vacío.
-5. Revisar `store_data/output/` y `store_data/logs/aadtex.log`. Detener con **Ctrl+C**.
-
-El JAR ejecutable está incluido en `dist/ra1-act1.jar`: el arranque no requiere Maven ni descargar dependencias. La primera ejecución crea sus datos automáticamente; la carpeta de trabajo no se entrega ya consumida.
-
-Equivalente desde la raíz del proyecto:
-
-```shell
-java -Dfile.encoding=UTF-8 -jar dist/ra1-act1.jar
-```
-
-Para repetir toda la demostración sin borrar resultados anteriores, abrir **`nueva-demo.cmd`**. Cada ejecución emplea una carpeta nueva bajo `demostraciones/`. La aplicación muestra la ruta exacta en el log. También puede elegirse otra carpeta:
-
-```shell
-java -jar dist/ra1-act1.jar --aadtex.data-dir=./otra-demo
-```
-
-## Compilar desde el código y ejecutar las pruebas
-
-Con Java 21 y conexión a Internet en la primera compilación:
+Requisito: Java 21. Desde la carpeta del proyecto, ejecutar:
 
 ```powershell
-.\mvnw.cmd clean verify
 .\mvnw.cmd spring-boot:run
 ```
 
-En Linux/macOS: `sh mvnw clean verify` y `sh mvnw spring-boot:run`.
-Si Maven está instalado: `mvn clean verify` y `mvn spring-boot:run`.
-El Maven Wrapper descarga Maven 3.9.9 automáticamente. El proyecto usa Spring Boot 3.5.7. El archivo generado al compilar es `target/ra1-act1-1.0.0.jar`. El JAR de `dist/` corresponde al código verificado de esta entrega; si se modifica el código, ejecutar el nuevo JAR de `target/`.
+También se puede abrir `iniciar.cmd`, utilizar `mvn spring-boot:run` si Maven está instalado o ejecutar `AadApplication` desde el IDE. Maven Wrapper descarga Maven y las dependencias en la primera ejecución, por lo que se necesita conexión a Internet para esa primera preparación.
 
-## Datos de prueba y resultados esperados
+La ruta predeterminada es `C:/workspace/store_data`, como indica el enunciado. Puede modificarse en `src/main/resources/application.properties`.
 
-Los ficheros originales están incluidos en `datos-prueba/input/` y la clave en `datos-prueba/keys/`. `MultiLanguageDataGenerator` crea el mismo conjunto al arrancar, incluidas imágenes JPEG reales con firmas **ficticias** para la práctica.
+Los datos de ejemplo incluidos en `src/main/resources/datos/` se copian a `input/` la primera vez que arranca la aplicación. El archivo `.datos-generados` evita volver a crear los mismos ejemplos en cada reinicio.
 
-| Lote | Transacciones | Total |
-|---|---:|---:|
-| España · UTF-8 y «Gran Vía» | 3 | 20100.80 |
-| China · 上海南京东路店 | 2 | 41300.80 |
-| Financiero · AES-128 | 1 | 95000.00 |
-| Estados Unidos · CSV y JPG dentro del ZIP | 3 | 68450.75 |
-| **Total** | **9** | **224852.35** |
+Después de unos segundos, los resultados están en:
 
-Se generan **4 JSON**, **4 firmas** y se aísla **1 fichero de 0 bytes**. No se atribuye una moneda que los CSV no especifican. Los importes se calculan con `BigDecimal`.
+- `output/processed/`: los CSV, ENC y ZIP originales procesados.
+- `output/processed/signatures/`: las cuatro firmas JPG.
+- `output/error/`: el fichero vacío y los archivos inválidos.
+- `output/bucket/aadtex-daily-reports/2026/09/`: los cuatro resúmenes JSON.
+- `aadtex.log`: el registro de ejecución.
 
-```text
-store_data/
-├── .demo-generated
-├── keys/AadTexSecret.key
-├── input/                              # vacía tras procesar los ejemplos
-├── logs/aadtex.log
-└── output/
-    ├── processed/                      # CSV originales, ENC cifrado y ZIP original
-    │   └── signatures/                 # los 4 JPEG copiados
-    ├── error/daily_sales_broken_store.csv
-    ├── .staging/                       # temporales binarios/JSON; vacía al finalizar
-    └── bucket/aadtex-daily-reports/2026/09/
-        └── summary_batch_[SHA256].json    # uno por lote válido
+Los totales de los ejemplos son España 20100.80, China 41300.80, financiero 95000.00 y USA 68450.75; el acumulado es 224852.35, con nueve ventas. El balance financiero y el ZIP se procesan sin generar un CSV descifrado o extraído en disco. El JPG del ZIP se copia directamente a su destino, sin archivos temporales.
+
+## Comprobación
+
+```powershell
+.\mvnw.cmd clean verify
 ```
 
-Cada JSON contiene identificador, origen, número de transacciones, total, tiendas, categorías, fechas de transacción y fecha real del procesamiento. La ruta `2026/09` se mantiene porque la exige el ejercicio; no depende del mes en el que se ejecute.
-
-## Correspondencia con los requisitos
-
-| Requisito | Implementación | Evidencia |
-|---|---|---|
-| 1. Scheduler | `AadApplication`, `StoreIngestionScheduler`, `@Scheduled(fixedRate = 5000)` | `docs/evidencias/02-ejecucion-scheduler.log` |
-| 2. NIO.2 y aislamiento | `StoragePaths`, `StoreIngestionService`: `Path`, `Files.exists`, `createDirectories`, `size`, `move` | `docs/evidencias/salida-real/error/` |
-| 3. ZIP en caliente | `StoreIngestionService.processZip`: `ZipInputStream`, `ZipEntry`; lectores que no cierran el contenedor | Log `[ZIP]` y resumen USA |
-| 4. AES-128 en RAM | `CryptoService`, `ByteArrayInputStream`; modo ECB/PKCS5Padding del enunciado | Log `[AES]`, ENC archivado, ausencia de CSV financiero |
-| 5. UTF-8 | `CsvSalesReader`: `BufferedReader`, `InputStreamReader`, decodificador UTF-8 estricto | JSON de España y China |
-| 6. Buffer 4 KB | `SignatureService`: `BufferedInputStream`, `BufferedOutputStream`, `byte[4096]` | Log `[JPG]` y pruebas de igualdad binaria |
-| 7. Generador | `MultiLanguageDataGenerator` implementa `CommandLineRunner` | `datos-prueba/`, `01-generacion.log` |
-| 8. Bucket JSON | `CloudBucketService` | `salida-real/bucket/aadtex-daily-reports/2026/09/` |
-
-## Decisiones para resolver las diferencias del enunciado
-
-- **Directorio portable:** por defecto `./store_data`, relativo al directorio desde el que se arranca; los lanzadores se sitúan en la raíz. Evita permisos y ajustes en otro equipo. Puede emplearse exactamente `C:/workspace/store_data` pasando `--aadtex.data-dir=C:/workspace/store_data`, o `/workspace/store_data` en Linux.
-- **Firmas:** se usa `output/processed/signatures/`, siguiendo el requisito 6 y el árbol del enunciado principal. El documento de ejemplos menciona también `output/signatures/`.
-- **Correo:** la alerta a `soporte@aadtex.com` es una **simulación en el log**, como permite el ejercicio; no necesita cuenta de correo ni envía mensajes reales.
-- **Clave:** `AadTexSecret2026` son 16 bytes UTF-8, válidos para AES-128. El generador crea el fichero de clave de ejemplo y el servicio usa la misma constante indicada en el ejercicio. El modo ECB y la clave fija reproducen exclusivamente el formato de esta actividad.
-- **Memoria:** CSV y JPEG se tratan como flujos. El lote cifrado se carga en memoria por exigencia del requisito 4 y tiene un límite de 16 MiB. También se limita a 16 MiB el CSV leído y a 32 MiB cada firma, incluyendo las entradas descomprimidas de ZIP. No se escribe el CSV financiero descifrado ni el CSV interno del ZIP en disco. Los resúmenes JSON sí publican los totales requeridos.
-- **Movimiento:** se intenta `ATOMIC_MOVE` con `REPLACE_EXISTING`; si el sistema no soporta movimientos atómicos se recurre a `Files.move` con `REPLACE_EXISTING`. Los destinos de archivos archivados/erróneos reciben sufijo único si ya existen.
-- **Repeticiones y recuperación:** `BatchIdentity` calcula SHA-256 del nombre y bytes originales, en flujo con buffer de 4 KB. El mismo lote produce el mismo nombre JSON. Si el resumen ya existe, el reenvío se archiva sin reescribirlo. Tras una interrupción entre publicar y archivar, el siguiente ciclo termina el archivado; si el fallo ocurre después de copiar la firma del ZIP, se reutiliza o sustituye la firma validada al reintentar. El contenido modificado produce otra identidad. Se verificó con pruebas y un reenvío real. Se usa una sola instancia: no se ofrece una transacción global ante pérdida física de datos, modificación manual del bucket o fallos simultáneos de varias instancias.
-- **Errores transitorios:** los fallos de acceso o publicación se registran como `[RETRY]` y mantienen el origen en `input/`. Sólo `BatchValidationException` identifica contenido inválido para moverlo a `error/`. Se comprueba de nuevo la huella antes de publicar para detectar cambios durante la lectura.
-- **Firmas pendientes:** un CSV/ENC válido sin su firma espera al siguiente ciclo. Un fichero vacío se aísla inmediatamente.
-- **ZIP:** valida el directorio central, CRC al consumir las entradas, pareja CSV/JPG, nombres y ausencia de rutas peligrosas. Las imágenes se validan por cabecera y final JPEG; no se hace una validación gráfica exhaustiva de JPEG arbitrarios.
-- **CSV:** acepta comas y comillas escapadas dentro de campos entrecomillados; una transacción ocupa una línea. Rechaza cabeceras incorrectas, UTF-8 inválido, fechas incorrectas e importes negativos o con más de dos decimales.
-
-## Capturas y evidencias
-
-Abrir **`docs/evidencias/index.html`** para consultar las evidencias. Las capturas PNG están en `docs/capturas/`: son capturas originales del Bloc de notas de Windows mostrando los **logs, JSON y resultados reales** guardados tras ejecutar la aplicación y las pruebas. Los extractos de logs están rotulados e indican el archivo original completo. No se ha simulado una consola ni un IDE. Los originales completos se incluyen al lado para comprobar su contenido.
-
-**`docs/MEMORIA.pdf`** es la memoria lista para presentar; se adjuntan sus versiones HTML y Markdown. `docs/DEFENSA.md` contiene un guion de demostración y preguntas con respuestas.
-
-## GitHub y Moodle
-
-Repositorio de destino: https://github.com/lPablo27l/Acceso-a-datos
-
-El proyecto se versiona en la rama `main`. Las fuentes, las pruebas, los datos, el JAR y la documentación forman parte del repositorio. Para actualizarlo después de modificar el código, hacer commit y usar **Push origin** en GitHub Desktop. La captura `docs/capturas/05-github-publicado.png` corresponde a la publicación inicial de la entrega.
-
-Entregar en Moodle **un único fichero `ra1_act1.zip`**, conservando exactamente ese nombre. La defensa se realiza con lo que contiene ese ZIP, incluido el código, los ejemplos, el JAR, la memoria y las evidencias.
+La memoria con las capturas y la correspondencia de los ocho requisitos está en `Memoria.pdf`.
