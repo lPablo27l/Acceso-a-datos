@@ -10,7 +10,11 @@
 6. Mostrar que el financiero se conserva como `.enc` y que no se creó su CSV descifrado. Explicar que el resumen JSON publica los totales solicitados.
 7. Esperar otro ciclo. El escaneo indica cero entradas y no aparecen JSON nuevos. Detener con Ctrl+C.
 
-Si se dispone de tiempo, ejecutar `.\mvnw.cmd test` para mostrar las 12 pruebas. El JAR incluido permite demostrar el funcionamiento sin Internet; la primera compilación del código con Maven sí puede descargar dependencias.
+Si se dispone de tiempo, ejecutar `.\mvnw.cmd test` para mostrar las 21 pruebas. El JAR incluido permite demostrar el funcionamiento sin Internet; la primera compilación del código con Maven sí puede descargar dependencias.
+
+## Demostración extra de recuperación
+
+Con la aplicación detenida después de procesar los ejemplos, copiar `datos-prueba/input/daily_sales_spain.csv` de nuevo a `store_data/input/`. Abrir `iniciar.cmd` y esperar el escaneo. Aparecerá `[RECOVER]`: el lote se archiva y siguen existiendo exactamente cuatro JSON con sus fechas originales. No hace falta descifrar ni extraer el lote otra vez porque el resumen confirma una publicación previa.
 
 ## Preguntas habituales
 
@@ -50,8 +54,17 @@ Un marcador `.demo-generated` indica que ya generó los ejemplos. Los ficheros p
 **¿El bucket es un servicio cloud real?**  
 No. `CloudBucketService` simula el bucket con directorios y JSON locales, dejando la salida lista para la App 2. No se implementa la App 2 porque esta actividad pide la App 1.
 
+**¿Por qué SHA-256 en el nombre del resumen?**  
+La huella depende del nombre original y sus bytes. Permite saber, incluso después de reiniciar, que ese lote ya publicó su resumen. No es un cifrado ni permite recuperar el contenido. Una retransmisión idéntica conserva el JSON; si cambian las ventas cambia la huella.
+
+**¿Qué diferencia hay entre `[RETRY]` y la alerta?**  
+La alerta identifica datos inválidos y los aísla. `[RETRY]` indica un problema de acceso/publicación o un archivo que cambió durante la lectura, por lo que el origen se deja en entrada para otro intento. Un problema del disco no convierte unas ventas válidas en corruptas.
+
+**¿Cómo se comprueba una interrupción?**  
+Las pruebas simulan una excepción después de publicar el JSON o después de copiar la firma de un ZIP y crean otra instancia del servicio para reintentar. Se comprueba que el JSON no se duplica y que los archivos válidos no van a errores. Además se hizo un reenvío real de España con el JAR.
+
 **¿Qué contienen las pruebas?**  
-Los ejemplos completos y sus totales, conservación de UTF-8 y bytes JPEG, AES, ausencia de duplicados, firma pendiente, CSV corrupto, cifrado inválido, ZIP truncado, rutas ZIP peligrosas y pareja incompleta.
+Son 21: incluyen reenvíos, cambios de contenido, fallos de publicación, interrupciones entre pasos y cambios durante la lectura, además de los ejemplos completos y sus totales, conservación de UTF-8 y bytes JPEG, AES, ausencia de duplicados, firma pendiente, CSV corrupto, cifrado inválido, ZIP truncado, rutas ZIP peligrosas y pareja incompleta.
 
 **¿Qué límites tiene esta solución?**  
-Una sola instancia, alertas y bucket simulados, CSV de una transacción por línea, límite de 16 MiB en los lotes de texto/cifrados y sin garantía de transacción global ante una terminación brusca entre escrituras. Las firmas de demostración son ficticias y el validador JPEG comprueba cabecera y final, no todos los segmentos de una imagen arbitraria.
+Una sola instancia, alertas y bucket simulados, CSV de una transacción por línea, límites de 16 MiB en texto/cifrado y 32 MiB por firma y sin garantía de transacción global ante una terminación brusca entre escrituras. Las firmas de demostración son ficticias y el validador JPEG comprueba cabecera y final, no todos los segmentos de una imagen arbitraria.

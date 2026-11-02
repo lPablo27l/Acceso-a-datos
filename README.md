@@ -68,7 +68,7 @@ store_data/
     ├── error/daily_sales_broken_store.csv
     ├── .staging/                       # temporales binarios/JSON; vacía al finalizar
     └── bucket/aadtex-daily-reports/2026/09/
-        └── summary_batch_[UUID].json    # uno por lote válido
+        └── summary_batch_[SHA256].json    # uno por lote válido
 ```
 
 Cada JSON contiene identificador, origen, número de transacciones, total, tiendas, categorías, fechas de transacción y fecha real del procesamiento. La ruta `2026/09` se mantiene porque la exige el ejercicio; no depende del mes en el que se ejecute.
@@ -92,28 +92,24 @@ Cada JSON contiene identificador, origen, número de transacciones, total, tiend
 - **Firmas:** se usa `output/processed/signatures/`, siguiendo el requisito 6 y el árbol del enunciado principal. El documento de ejemplos menciona también `output/signatures/`.
 - **Correo:** la alerta a `soporte@aadtex.com` es una **simulación en el log**, como permite el ejercicio; no necesita cuenta de correo ni envía mensajes reales.
 - **Clave:** `AadTexSecret2026` son 16 bytes UTF-8, válidos para AES-128. El generador crea el fichero de clave de ejemplo y el servicio usa la misma constante indicada en el ejercicio. El modo ECB y la clave fija reproducen exclusivamente el formato de esta actividad.
-- **Memoria:** CSV y JPEG se tratan como flujos. El lote cifrado se carga en memoria por exigencia del requisito 4 y tiene un límite de 16 MiB. También se limita a 16 MiB el CSV leído. No se escribe el CSV financiero descifrado ni el CSV interno del ZIP en disco. Los resúmenes JSON sí publican los totales requeridos.
+- **Memoria:** CSV y JPEG se tratan como flujos. El lote cifrado se carga en memoria por exigencia del requisito 4 y tiene un límite de 16 MiB. También se limita a 16 MiB el CSV leído y a 32 MiB cada firma, incluyendo las entradas descomprimidas de ZIP. No se escribe el CSV financiero descifrado ni el CSV interno del ZIP en disco. Los resúmenes JSON sí publican los totales requeridos.
 - **Movimiento:** se intenta `ATOMIC_MOVE` con `REPLACE_EXISTING`; si el sistema no soporta movimientos atómicos se recurre a `Files.move` con `REPLACE_EXISTING`. Los destinos de archivos archivados/erróneos reciben sufijo único si ya existen.
-- **Repeticiones:** los originales salen de `input/` tras su procesamiento. `.demo-generated` evita recrear los ejemplos en cada arranque. Se ha comprobado que ciclos posteriores y un reinicio normal conservan los mismos cuatro JSON. La práctica está diseñada para una sola instancia; no implementa transacciones distribuidas ante un corte brusco entre la publicación y el archivado.
+- **Repeticiones y recuperación:** `BatchIdentity` calcula SHA-256 del nombre y bytes originales, en flujo con buffer de 4 KB. El mismo lote produce el mismo nombre JSON. Si el resumen ya existe, el reenvío se archiva sin reescribirlo. Tras una interrupción entre publicar y archivar, el siguiente ciclo termina el archivado; si el fallo ocurre después de copiar la firma del ZIP, se reutiliza o sustituye la firma validada al reintentar. El contenido modificado produce otra identidad. Se verificó con pruebas y un reenvío real. Se usa una sola instancia: no se ofrece una transacción global ante pérdida física de datos, modificación manual del bucket o fallos simultáneos de varias instancias.
+- **Errores transitorios:** los fallos de acceso o publicación se registran como `[RETRY]` y mantienen el origen en `input/`. Sólo `BatchValidationException` identifica contenido inválido para moverlo a `error/`. Se comprueba de nuevo la huella antes de publicar para detectar cambios durante la lectura.
 - **Firmas pendientes:** un CSV/ENC válido sin su firma espera al siguiente ciclo. Un fichero vacío se aísla inmediatamente.
 - **ZIP:** valida el directorio central, CRC al consumir las entradas, pareja CSV/JPG, nombres y ausencia de rutas peligrosas. Las imágenes se validan por cabecera y final JPEG; no se hace una validación gráfica exhaustiva de JPEG arbitrarios.
 - **CSV:** acepta comas y comillas escapadas dentro de campos entrecomillados; una transacción ocupa una línea. Rechaza cabeceras incorrectas, UTF-8 inválido, fechas incorrectas e importes negativos o con más de dos decimales.
 
 ## Capturas y evidencias
 
-Abrir **`docs/evidencias/index.html`** para consultar las evidencias. Las capturas PNG están en `docs/capturas/`: son capturas originales del Bloc de notas de Windows mostrando los **logs, JSON y resultados reales** guardados tras ejecutar la aplicación y las pruebas. No se ha simulado una consola ni un IDE. Los originales completos se incluyen al lado para comprobar su contenido.
+Abrir **`docs/evidencias/index.html`** para consultar las evidencias. Las capturas PNG están en `docs/capturas/`: son capturas originales del Bloc de notas de Windows mostrando los **logs, JSON y resultados reales** guardados tras ejecutar la aplicación y las pruebas. Los extractos de logs están rotulados e indican el archivo original completo. No se ha simulado una consola ni un IDE. Los originales completos se incluyen al lado para comprobar su contenido.
 
-`docs/MEMORIA.md` explica el funcionamiento y las capturas. `docs/DEFENSA.md` contiene un guion de demostración y preguntas con respuestas.
+**`docs/MEMORIA.pdf`** es la memoria lista para presentar; se adjuntan sus versiones HTML y Markdown. `docs/DEFENSA.md` contiene un guion de demostración y preguntas con respuestas.
 
 ## GitHub y Moodle
 
 Repositorio de destino: https://github.com/lPablo27l/Acceso-a-datos
 
-El README identifica el repositorio; la existencia del enlace no implica que la subida esté realizada. Comprobar en GitHub que aparecen `src`, `pom.xml`, `README.md`, `dist`, `datos-prueba` y `docs`. Si falta publicarlo, abrir la carpeta de este proyecto en GitHub Desktop, añadir el repositorio existente como remoto y publicar los commits. También puede usarse Git desde una sesión autenticada:
-
-```shell
-git remote -v
-git push -u origin main
-```
+El proyecto se versiona en la rama `main`. Las fuentes, las pruebas, los datos, el JAR y la documentación forman parte del repositorio. Para actualizarlo después de modificar el código, hacer commit y usar **Push origin** en GitHub Desktop. La captura `docs/capturas/05-github-publicado.png` corresponde a la publicación inicial de la entrega.
 
 Entregar en Moodle **un único fichero `ra1_act1.zip`**, conservando exactamente ese nombre. La defensa se realiza con lo que contiene ese ZIP, incluido el código, los ejemplos, el JAR, la memoria y las evidencias.

@@ -8,8 +8,8 @@
 
  :: Spring Boot ::                (v3.5.7)
 
-19:00:55.005 INFO  [main] e.a.AadApplication - Starting AadApplication v1.0.0 using Java 21.0.12.1 with PID 19332 (C:\Users\Pablo\Documents\Codex\2026-11-02\gen\outputs\ra1_act1\dist\ra1-act1.jar started by Pablo in C:\Users\Pablo\Documents\Codex\2026-11-02\gen\outputs\ra1_act1)
-19:00:55.007 INFO  [main] e.a.AadApplication - No active profile set, falling back to 1 default profile: "default"
-19:00:55.782 INFO  [main] e.a.AadApplication - Started AadApplication in 1.289 seconds (process running for 1.746)
-19:01:00.765 INFO  [scheduling-1] e.a.StoreIngestionService - [SCAN] Entrada: C:\Users\Pablo\Documents\Codex\2026-11-02\gen\outputs\ra1_act1\store_data\input | ficheros: 0
-19:01:05.764 INFO  [scheduling-1] e.a.StoreIngestionService - [SCAN] Entrada: C:\Users\Pablo\Documents\Codex\2026-11-02\gen\outputs\ra1_act1\store_data\input | ficheros: 0
+19:36:21.780 INFO  [main] e.a.AadApplication - Starting AadApplication v1.0.0 using Java 21.0.12.1 with PID 42324 (C:\Users\Pablo\Documents\Codex\2026-11-02\gen\outputs\ra1_act1\dist\ra1-act1.jar started by Pablo in C:\Users\Pablo\Documents\Codex\2026-11-02\gen\outputs\ra1_act1)
+19:36:21.784 INFO  [main] e.a.AadApplication - No active profile set, falling back to 1 default profile: "default"
+19:36:22.479 INFO  [main] e.a.AadApplication - Started AadApplication in 1.159 seconds (process running for 1.59)
+19:36:27.471 INFO  [scheduling-1] e.a.StoreIngestionService - [SCAN] Entrada: input | ficheros: 0
+19:36:32.469 INFO  [scheduling-1] e.a.StoreIngestionService - [SCAN] Entrada: input | ficheros: 0

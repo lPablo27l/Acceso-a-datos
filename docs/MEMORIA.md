@@ -1,85 +1,73 @@
-# Memoria · AadTex Store Ingestion Engine
+# Memoria de la actividad RA1
 
-**Alumno:** Pablo Eugenio Escolar Carrellan  
-**Curso:** 2ºDAM · Acceso a Datos  
-**Actividad:** RA1 Actividad 1 · Manejo de Ficheros  
-**Repositorio de destino:** https://github.com/lPablo27l/Acceso-a-datos  
-**Fecha de verificación:** 2 de noviembre de 2026
+**Pablo Eugenio Escolar Carrellan · 2ºDAM · Acceso a Datos**  
+**AadTex Store Ingestion Engine · App 1**  
+Repositorio: https://github.com/lPablo27l/Acceso-a-datos  
+Verificación: 2 de noviembre de 2026
 
-## 1. Objetivo
+## Objetivo y resultado
 
-Automatizar la recepción de ventas de distintas tiendas, validar sus ficheros, calcular sus totales y dejar la salida preparada para otra aplicación. Se implementan exclusivamente la App 1 y un bucket local simulado, conforme al enunciado.
+Automatizar la ingestión de ventas de tiendas internacionales sin intervención manual. Se implementan los ocho requisitos: tareas programadas, NIO.2, ZIP en flujo, AES-128 en RAM, lectura UTF-8, copia JPG con buffer de 4 KB, generador de pruebas y publicación JSON en un bucket local.
 
-## 2. Organización y funcionamiento
+El resultado verificado es de cuatro lotes válidos, nueve transacciones, cuatro firmas copiadas y un archivo vacío aislado. España suma 20100.80; China 41300.80; el financiero 95000.00; USA 68450.75. El acumulado es 224852.35. El formato de entrada no especifica moneda.
 
-`AadApplication` arranca Spring Boot y habilita las tareas programadas. `MultiLanguageDataGenerator` prepara los CSV de España y China, el balance AES, tres firmas, el lote ZIP de Estados Unidos y un fichero vacío. Las firmas son JPEG sintéticos para pruebas.
+## Organización del código
 
-`StoreIngestionScheduler` espera a que la aplicación esté lista y llama al motor cada 5000 ms. `StoreIngestionService` crea los directorios necesarios con NIO.2 y escanea la entrada. Copia primero las firmas sueltas y procesa después las ventas. Un CSV o ENC espera si falta su firma; un fichero de cero bytes se aísla inmediatamente. Cada entrada se trata de forma independiente para que un lote corrupto no bloquee a los demás.
+`AadApplication` habilita el Scheduler. `MultiLanguageDataGenerator` crea los ocho ficheros de prueba y la clave del ejercicio una sola vez. `StoreIngestionScheduler` espera a que termine el arranque y llama al motor cada cinco segundos. `StoragePaths` reúne las rutas y los movimientos NIO.2.
 
-Los CSV se leen con `BufferedReader`, `InputStreamReader` y UTF-8 explícito. Se valida cabecera, número de campos, fechas e importes. `BigDecimal` suma las ventas sin errores de coma flotante. Las tiendas mantienen sus caracteres originales en los JSON.
+`StoreIngestionService` ordena la entrada, copia las firmas sueltas y procesa CSV, ENC o ZIP. `CsvSalesReader` valida cabecera, campos, importes y fechas. Usa un decodificador UTF-8 estricto y `BigDecimal`. `CryptoService` aplica AES/ECB/PKCS5Padding y la clave de 16 bytes indicada; el contenido descifrado se lee con `ByteArrayInputStream` y no se guarda en disco.
 
-El fichero `.enc` se descifra con `CryptoService` y AES-128/ECB/PKCS5Padding, usando la clave de 16 bytes `AadTexSecret2026`. El CSV descifrado se lee con `ByteArrayInputStream` y no se guarda en disco. El texto financiero de ejemplo forma parte del generador porque es un dato de prueba requerido.
+`SignatureService` combina streams con buffer y un array de 4096 bytes. Valida los marcadores de inicio y fin JPEG, con un límite de 32 MiB. `CloudBucketService` escribe el resumen en un temporal UTF-8 antes de moverlo al bucket. El CSV interno del ZIP se consume con `ZipInputStream` sin crear un CSV temporal; se revisan también pareja de nombres, rutas, truncamiento y CRC.
 
-El ZIP se consume entrada a entrada con `ZipInputStream` y `ZipEntry`. No se crea un CSV temporal. Se comprueba la pareja de ventas y firma y se rechazan nombres peligrosos o archivos ZIP incompletos. La firma se copia a un temporal binario antes de publicarse y los temporales se eliminan al terminar.
+## Recuperación y clasificación de errores
 
-`SignatureService` copia imágenes con `BufferedInputStream`, `BufferedOutputStream` y un array de 4096 bytes. Verifica la cabecera y el final JPEG. `CloudBucketService` escribe cada resumen JSON en UTF-8 y lo publica mediante un movimiento del temporal al destino.
+`BatchIdentity` calcula SHA-256 del nombre del fichero, un separador y los bytes originales. Se lee con un buffer de 4096 bytes, sin cargar imágenes o ZIP completos. El identificador se usa en el nombre del JSON. El mismo nombre y contenido produce la misma identidad, y un contenido distinto produce otro lote.
 
-## 3. Resultados de la ejecución real
+Si el JSON ya está publicado, el siguiente ciclo o un reenvío termina el archivado sin volver a escribir el resumen. Esto conserva su marca temporal y evita duplicados. Si el programa se detiene después de copiar la firma del ZIP pero antes de publicar el JSON, el nuevo intento reutiliza la firma idéntica o instala la firma validada y continúa.
 
-| Origen | Transacciones | Total calculado |
-|---|---:|---:|
-| España | 3 | 20100.80 |
-| China | 2 | 41300.80 |
-| Financiero | 1 | 95000.00 |
-| Estados Unidos | 3 | 68450.75 |
-| **Acumulado** | **9** | **224852.35** |
+`BatchValidationException` representa datos inválidos y provoca la alerta simulada y el aislamiento en `error/`. Los fallos de acceso o publicación se registran como `[RETRY]` y mantienen el lote en `input/`. Antes de publicar se recalcula la huella para detectar que un productor cambió el fichero durante la lectura.
 
-Se obtuvieron cuatro resúmenes, cuatro firmas copiadas y un archivo vacío en la carpeta de errores. El log conserva la alerta simulada a `soporte@aadtex.com`. No se enviaron correos reales.
+## Pruebas y ejecución real
 
-Los siguientes ciclos encontraron cero entradas. Se reinició el proceso y se compararon los nombres y hashes SHA-256 de los cuatro JSON: permanecieron idénticos. Las evidencias originales se conservan en `evidencias/` y la salida completa en `evidencias/salida-real/`.
+Se ejecutaron 21 pruebas JUnit, sin fallos, errores ni pruebas omitidas. Cubren datos internacionales, totales, AES, copia JPEG byte a byte, CSV inválido, ZIP truncado/peligroso, firma pendiente, límites, reenvíos, contenido modificado y recuperación de interrupciones simuladas.
 
-## 4. Capturas originales
+El JAR se ejecutó como proceso real de Spring Boot: el hilo programado procesó los ocho archivos iniciales y los ciclos siguientes encontraron cero entradas. Después se reinició sin cambiar los JSON y se reenvió el CSV original de España. Los nombres y hashes SHA-256 de los cuatro resúmenes permanecieron iguales. Las excepciones de disco o interrupción de las pruebas son simuladas deliberadamente; no son fallos de la demostración real.
 
-Las siguientes imágenes son capturas de pantalla originales de Windows, tomadas con los ficheros reales abiertos en Bloc de notas. No se ha recreado una consola ni se ha modificado el contenido mostrado.
+## Evidencias originales
 
-### Captura 1 · Ejecución automática y aislamiento
+Las capturas son originales de Windows, con el texto ampliado en Bloc de notas. Los archivos de extractos indican su fuente; los registros íntegros y los JSON se adjuntan en `evidencias/`. No se recreó una terminal ni un IDE.
 
-![Ejecución real](capturas/01-ejecucion-real.png)
+![Ejecución automática](capturas/01-ejecucion-real.png)
 
-El hilo `scheduling-1` muestra la copia de los tres JPEG sueltos con buffer de 4096 bytes, la ingestión del ZIP con su cuarta firma, el descifrado en RAM, los cuatro importes y la alerta del fichero vacío. Los dos últimos escaneos, separados por cinco segundos, encuentran cero ficheros.
+El log muestra Scheduler, buffer de 4096 bytes, ZIP, AES en RAM, los cuatro importes y el fichero de cero bytes aislado. Los dos últimos escaneos están separados por cinco segundos.
 
-### Captura 2 · Ventas de China y UTF-8
+![JSON originales y UTF-8](capturas/02-json-utf8.png)
 
-![JSON de China](capturas/02-json-china.png)
+Se conservan los caracteres chinos y «Gran Vía». Ambos JSON incluyen un identificador SHA-256, la fecha original de ventas y el instante real de procesamiento.
 
-El JSON contiene `Zara 上海南京东路店`, dos transacciones y un total de 41300.80. La fecha de ventas se mantiene en septiembre de 2026; `processedAt` refleja el instante real de ejecución en UTC.
+![Pruebas y recuperación](capturas/03-pruebas-recuperacion.png)
 
-### Captura 3 · Ventas de España y tildes
+El extracto identifica las interrupciones simuladas, los reintentos y las recuperaciones. El resultado final es `Tests run: 21, Failures: 0, Errors: 0, Skipped: 0` y `BUILD SUCCESS`.
 
-![JSON de España](capturas/03-json-espana.png)
+## Uso y defensa
 
-El JSON conserva «Zara Gran Vía Madrid» y resume las tres transacciones por 20100.80.
+Descomprimir `ra1_act1.zip`, entrar en su carpeta y abrir `iniciar.cmd` con Java 21 disponible. El JAR de `dist/` incluye sus dependencias y puede arrancar sin Internet. Para otra demostración, `nueva-demo.cmd` utiliza una carpeta distinta. Para compilar: `mvnw.cmd clean verify`; para ejecutar desde fuentes: `mvnw.cmd spring-boot:run`.
 
-### Captura 4 · Compilación y pruebas
+En la defensa se debe explicar qué activa `@EnableScheduling`, la diferencia entre `fixedRate` y `fixedDelay`, cómo se cierran los flujos, por qué se usa UTF-8 y BigDecimal, cómo se lee un ZIP sin extraerlo y por qué una huella no es un cifrado. `DEFENSA.md` incluye respuestas y un guion de demostración.
 
-![Compilación y pruebas](capturas/04-compilacion-pruebas.png)
+## Decisiones y alcance
 
-El registro muestra `Tests run: 12, Failures: 0, Errors: 0, Skipped: 0` y `BUILD SUCCESS`. Algunas alertas del registro pertenecen a pruebas que introducen deliberadamente archivos defectuosos. La consola de pruebas capturada por Maven usa la codificación de Windows y puede mostrar sustituciones de caracteres en ese registro; los JSON y el log UTF-8 de la aplicación se verifican por separado en las otras capturas.
+Se usa `./store_data` para que funcione al descomprimir, con ruta absoluta configurable. Las firmas se publican en `output/processed/signatures/`, conforme al requisito principal. El bucket mantiene `2026/09` como pide el ejercicio. El correo y el bucket se simulan localmente.
 
-## 5. Validación
+Los límites son 16 MiB para CSV/cifrado y 32 MiB por firma; el CSV admite una transacción por línea y campos entrecomillados. La clave fija y ECB reproducen el formato del ejercicio. Las firmas son ficticias y sólo se validan sus marcadores JPEG. La recuperación está diseñada para una sola instancia y presupone que la publicación confirmada permanece en el bucket; no garantiza transacciones distribuidas, durabilidad física ante pérdida de energía o recuperación de archivos borrados/manipulados externamente.
 
-Las 12 pruebas verifican el conjunto completo de ejemplos, los totales por lote y acumulado, la igualdad de bytes en JPEG mayores que el buffer, la conservación de español/CJK, cifrado y descifrado, el rechazo de cifrado inválido y CSV defectuosos, espera de firmas, ZIP con entradas en distinto orden, ZIP truncado, rutas peligrosas, pareja incompleta, aislamiento y repetición de ciclos/reinicio sin duplicar ejemplos.
+## Correspondencia con los requisitos
 
-Además se ejecutó el JAR como proceso Spring Boot real para verificar que el programador procesa la entrada automáticamente, sin llamar manualmente al servicio. El Maven Wrapper se comprobó con Maven 3.9.9 y Java 21.
-
-## 6. Ejecución y entrega
-
-Abrir `iniciar.cmd` desde el proyecto descomprimido. Se incluye el JAR con sus dependencias en `dist/ra1-act1.jar`, de modo que no requiere Internet para arrancar con Java 21. Abrir `nueva-demo.cmd` para repetir en una carpeta distinta sin borrar la demostración anterior. Para compilar desde fuentes, seguir el README y ejecutar `mvnw.cmd clean verify`.
-
-La entrega es el archivo `ra1_act1.zip`. El enlace de GitHub figura en el README; la publicación efectiva debe verificarse en el repositorio antes de entregar. La guía `DEFENSA.md` permite preparar la demostración individual.
-
-## 7. Alcance y decisiones
-
-La ruta predeterminada es relativa (`./store_data`) para facilitar la portabilidad; la ruta absoluta del enunciado se puede seleccionar mediante una propiedad. Se mantiene el bucket `2026/09` y se elige `output/processed/signatures/` conforme al requisito principal. El README documenta estas diferencias de los documentos de partida.
-
-El correo y el bucket son simulaciones locales. El límite de texto y cifrado es de 16 MiB por lote. La aplicación está prevista para una instancia; los ciclos y reinicios normales no duplican los ejemplos, pero no hay una transacción global ante un cierre abrupto entre la escritura del resumen y el movimiento del origen. El CSV admite campos entrecomillados, con una transacción por línea. El modo AES y la clave fija reproducen el formato solicitado para la actividad.
+1. Scheduler: `AadApplication` y `StoreIngestionScheduler`.
+2. NIO.2: `StoragePaths` y `StoreIngestionService`.
+3. ZIP: `StoreIngestionService.processZip`.
+4. AES en RAM: `CryptoService` y `processSales`.
+5. CSV UTF-8: `CsvSalesReader`.
+6. JPG y buffer 4 KB: `SignatureService`.
+7. Generador: `MultiLanguageDataGenerator`.
+8. JSON y bucket local: `CloudBucketService`.
